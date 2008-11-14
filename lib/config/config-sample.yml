@@ -1,0 +1,10 @@
+jabber:
+  username: yourbot@jabber.org 
+  password: password
+  master: you@jabber.org
+  status: Computer is ready.
+
+twitter:
+  username: username
+  password: password
+

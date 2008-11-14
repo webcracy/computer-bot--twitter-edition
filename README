@@ -1,0 +1,88 @@
+
+		Welcome to Computer bot / Twitter edition.
+	----------------------------------------------
+	
+	Alexandre Loureiro Solleiro <alex@webcracy.org>, http://webcracy.org
+	
+	Website: 				http://computer.webcracy.org
+	Documentation: 	http://computer.webcracy.org/doc/
+	
+	Computer bot is a prototype bot platform. 
+	
+		Its objective is to explore the marriage of Empowered People, 
+		Web 2.0 (APIs, Mashups, Social), Personal Management Information Systems and Robots.
+	
+		Computer bot / Twitter edition is a proof of concept application.
+		Twitter users get an enhanced Twitter IM Bot.
+		Tweeting developers get a customizable, extendable, prototype IM Bot platform.
+	
+	
+	Some quick notes to get you started
+	-------
+	
+		Computer bot is a ruby program that requires several RubyGems.
+
+		You need Ruby (tested with 1.8.5 on Mac OS X and Linux) and to install 
+		the following gems before running Computer bot:
+
+			sudo gem install daemons
+			sudo gem install xmpp4r-simple
+			sudo gem install jabber-bot
+			sudo gem install json
+
+		Twitter edition requires you to install the following gem:
+		
+			sudo gem install twitter4r
+
+
+	Configuration
+	------
+	
+		Edit and rename 
+			lib/config/config-sample.yml 
+		to 
+			lib/config/config.yml
+	
+		Enter your bot's Jabber credentials (you can ask me for @webcracy.org accounts).
+		
+		If you're on Dreamhost, you must specify a resource with your jib, as such:
+			you@yourserveratdreamhost.com/resource
+		
+		Example:
+			computerbot@yourdomain.com/Bot
+		
+		Enter your Jabber ID (ex: you@gmail.com) as "master". (Dreamhosters: No need for a resource here)
+		Enter your bot's Status message, for example "Computer ready."
+		
+		Enter your Twitter credentials.
+		
+		
+	Running the bot
+	-------
+	
+		To run the bot, type:
+	
+			ruby computerbot.rb start
+	
+		To stop the bot, type:
+		
+			ruby computerbot.rb stop
+			
+	
+	Operating the bot
+	-------
+	
+		If your config is right, the bot will send you a message saying it's available.
+		
+		Send "help" to the bot to see all available commands.
+		
+		User and Developer documentation is being progressively made available at:
+			http://computer.webcracy.org/doc/
+		
+		You're welcome to contact me <alex@webcracy.org> via IM.		
+		
+  ------------------------------------------------------------------------------- 
+		Computer bot. Copyright Alexandre Loureiro Solleiro <alex@webcracy.org>, http://webcracy.org
+		You can read the LICENSE in computerbot.rb
+
+

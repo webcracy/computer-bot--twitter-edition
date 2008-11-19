@@ -179,11 +179,21 @@ class Bot
 
        @@bot.add_command(
         :syntax => 'track <keyword>',
-        :description => 'Delivers new tweets matching keyword search results as they come up.',
+        :description => 'Delivers news tweets about <keyword> as they come up.\nYou can use <start|status|stop> to control the feed.',
         :regex => /^track\s+.+$/,
         :is_public => false
        ) do |sender, message|
           execute_twitter_track_command(sender, message)
+        nil
+       end
+
+       @@bot.add_command(
+        :syntax => 'untrack <keyword>',
+        :description => 'Remove a <keyword> from the live track feed list.',
+        :regex => /^untrack\s+.+$/,
+        :is_public => false
+       ) do |sender, message|
+          execute_twitter_untrack_command(sender, message)
         nil
        end
 
@@ -278,6 +288,10 @@ class Bot
   def execute_twitter_track_command(sender,message)
     # Live Twitter message delivery happens inside a dedicated thread, so we make a different method call
     TwitterHub::Search.track(sender, message)
+  end
+  
+  def execute_twitter_untrack_command(sender,message)
+    deliver(sender, TwitterHub::Search.untrack(sender, message))
   end
   
   def execute_twitter_whois_command(sender,message)

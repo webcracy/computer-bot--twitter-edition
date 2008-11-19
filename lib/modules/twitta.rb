@@ -59,7 +59,7 @@ module TwitterHub
         status_id = store[id_type]
       end
       return status_id
-    end # self.store
+    end # self.load
     
     def self.store(id_type, status_id)
       YAML::Store.new(File.dirname(__FILE__) + '/../store/twitter_store.yml').transaction do |store|
@@ -143,7 +143,7 @@ module TwitterHub
           loop do
             timeline = @twitterhub_client.timeline_for(:friends, :since_id => TwitterHub::Persistence.load('unread'))
             if timeline.length > 0 # and timeline.length < 11 <= this could be a solution for backlog. 
-              Computer::Bot.deliver(sender, "A delivery at #{Time.now.to_s}")
+              # Computer::Bot.deliver(sender, "A delivery at #{Time.now.to_s}")
               store = TwitterHub::Persistence.store('unread', timeline.first.id)
               messages = Array.new
               timeline.each do |status|
@@ -215,6 +215,7 @@ module TwitterHub
   end # Timeline
   
   class Search
+    
     def self.query(sender, query)
       original_query = query
       query = query.gsub(' ', '+')
@@ -257,71 +258,120 @@ module TwitterHub
       
     def self.track(sender, query)
     
-    if query != 'stop' and query != 'status'
+      if query != 'status' and query != 'stop'
+              
+        targets = Persistence.load('track')
+        if targets.is_a?(Array)
+          words = Array.new
+          targets.each { |target| words << target[:word] }
+          if words.include?(query)
+            targets.each do |target|
+              if target[:word] == query
+                target[:on] = true
+              end # if target[:word]
+            end # targets.each
+            store = Persistence.store('track', targets)
+          else
+            if query != 'start'
+              new_target = {:word => query, :on => true, :max_id => '' }
+              targets << new_target
+              store = Persistence.store('track', targets)
+              Helper.deliver_new_track_target_results(sender, query)
+            end
+          end # words.include?      
+        else # if targets.is_a?(Array)
+          if query != 'start'
+            targets = Array.new
+            new_target = {:word => query, :on => true, :max_id => ''}
+            targets << new_target
+            store = Persistence.store('track', targets)     
+            Helper.deliver_new_track_target_results(sender, query)       
+          end # if query != 'start'
+        end # if target_list.is_a?(Array)    
 
-      original_query = query
-      query = TwitterHub::Helper.format_query(query)
+        if not @track_live_thread or @track_live_thread.alive? == false
+          @track_live_thread = Thread.new do 
+            loop do
+              targets = Persistence.load('track')  
+              targets.each do |target| #if targets.is_a?(Array)
+                if target[:on] == true
+                  word = target[:word]
+                  max_id = target[:max_id]
+                  keyword = Helper.format_query(word)
+                  begin
+                    search = JSON.load open("http://search.twitter.com/search.json?q='#{keyword}'&since_id='#{max_id}'")
+                  rescue
+                  end # begin
+                    target[:max_id] = search['max_id']
+                    messages = Array.new
+                    search['results'].each do |status|
+                      if status['id'].to_i > max_id.to_i
+                        message = Helper.format_search_status_json(status)
+                        messages << message
+                      end # if status['id']
+                    end # search['results'].each        
+                end # if target[:on] == true
+                Computer::Bot.deliver(sender, messages)          
+              end # targets.each    
+              store = Persistence.store('track', targets)             
+              sleep 60
+            end # loop
+          end # Thread.new        
+        end # if not @track_live_thread 
       
-      @track_live_thread = Thread.new do 
+      elsif query == 'status'
+        targets = Persistence.load('track')
+        words = Array.new
+        targets.each do |target| 
+          if target[:on] == true
+            words << target[:word]
+          end # if target[:on]
+        end # targets.each
+        messages = Array.new
+        messages << "Tracking: #{words.join(', ')}"
+        if @track_live_thread and @track_live_thread.alive? == true
+          messages << "The track live feed is running."
+        else
+          messages << "The track live feed is *not* running."
+        end # if @track_live_thread 
         
-        begin
-          initial_search = JSON.load open("http://search.twitter.com/search.json?q='#{query}'")
-          rescue
-          Computer::Bot.deliver(sender, "Hmmm, that keyword isn't returning anything.")
-        end # begin
+        Computer::Bot.deliver(sender, messages)
         
-        if initial_search  
-          Computer::Bot.deliver(sender, "Now tracking '#{original_query}' (started at #{Time.now.to_s})")
-        end # if initial_ser
+      elsif query == 'stop'
         
-        if initial_search['results'].length > 0
-          store = TwitterHub::Persistence.store('track', initial_search['max_id'])
-          Computer::Bot.deliver(sender, "These were the latest 2 tweets before you started tracking: ")
-          messages = Array.new
-          initial_search['results'][0..1].each do |status|
-            message = TwitterHub::Helper.format_search_status_json(status)
-            messages << message
-          end # initial_search['results'].each 
-          Computer::Bot.deliver(sender, messages)
-        else 
-          Computer::Bot.deliver(sender, "No previous results were found for your query '#{original_query}'. Tracking enabled.")
-        end # if initial_search['results']
-
-        loop do
-          begin
-          search = JSON.load open("http://search.twitter.com/search.json?q='#{query}'&since_id='#{TwitterHub::Persistence.load('track')}'")
-          rescue
-          end # begin
-          if search['results'].length > 0 and search['max_id'] > TwitterHub::Persistence.load('track') # and timeline.length < 11 <= this could be a solution for backlog. 
-            Computer::Bot.deliver(sender, "New results for #{original_query} at #{Time.now.to_s}")
-            load = TwitterHub::Persistence.load('track')
-            store = TwitterHub::Persistence.store('track', search['max_id'])
-            messages = Array.new
-            search['results'].each do |status|
-              if status['id'] > load
-                message = TwitterHub::Helper.format_search_status_json(status)
-                messages << message
-              end
-            end # search.each
-            Computer::Bot.deliver(sender, messages)
-          end # if        
-          sleep 60
-        end # loop
-      end # Thread.new
+        if @track_live_thread and @track_live_thread.alive? == true
+          kill = @track_live_thread.exit
+          if kill 
+            Computer::Bot.deliver(sender, 'Track live feed stopped.')
+          else
+            Computer::Bot.deliver(sender, "Sorry, I couldn't stop the track live feed. You should restart the bot...")
+          end # if kill
+        end # if @track_live_thread
+          
+      end # if query != 'status'
     
-    elsif query == 'status'
-      if @track_live_thread and @track_live_thread.alive? != false
-        Computer::Bot.deliver(sender, 'The Track feed is running and seems OK. Your keyword must be unpopular :)')
-      else
-        Computer::Bot.deliver(sender, 'Live Track feed not running.')
-      end # if
-    elsif query == 'stop'
-      @track_live_thread.exit
-      Computer::Bot.deliver(sender, 'Live Track feed stopped.')
-    
-    end # if query
-      
     end # self.track
+    
+    def self.untrack(sender, query)
+      
+      targets = Persistence.load('track')
+      if targets.is_a?(Array)
+        words = Array.new
+        targets.each { |target| words << target[:word] }
+        if words.include?(query)
+          targets.each do |target|
+            if target[:word] == query
+              target[:on] = false
+            end # if target[:word]
+          end # targets.each
+          store = Persistence.store('track', targets)
+          return "#{query} has been removed from the list."
+        else
+          return "I don't think you were tracking #{query}."
+        end # if words.include?
+      end # if targets.is_a?(Array)
+    end #self.untrack
+              
     
     def self.replies
       user = Twitter_username
@@ -452,6 +502,37 @@ module TwitterHub
       return query
     end
     
+    
+    def self.deliver_new_track_target_results(sender, target)
+      
+      query = TwitterHub::Helper.format_query(target)
+      begin
+        initial_search = JSON.load open("http://search.twitter.com/search.json?q='#{query}'")
+      rescue
+         Computer::Bot.deliver(sender, "I couldn't reach Twitter to fetch '#{query}' .")
+      end # begin 
+      if initial_search['results'].length > 0
+        targets = Persistence.load('track')
+        if targets.is_a?(Array)
+          targets.each do |word|
+            if word[:word] == target
+              word[:max_id] = initial_search['max_id']
+            end # if targets
+          end # if targets.each
+          Persistence.store('track', targets)
+        end # if targets
+        Computer::Bot.deliver(sender, "These were the latest 2 tweets before you started tracking '#{query}': ")
+        messages = Array.new
+        initial_search['results'][0..1].each do |status|
+          message = TwitterHub::Helper.format_search_status_json(status)
+          messages << message
+        end # initial_search['results'].each 
+        Computer::Bot.deliver(sender, messages)
+      else 
+        Computer::Bot.deliver(sender, "No previous results were found for your query '#{original_query}'. Tracking is enabled.")
+      end # if initial_search['results']
+    end # self.new_track_target
+    
   end # Helper
-  
+
 end # TwitterHub

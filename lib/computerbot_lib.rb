@@ -149,7 +149,7 @@ class Bot
 
        @@bot.add_command(
         :syntax => 'replies',
-        :description => 'Returns the 5 latest @replies from Twitter Search',
+        :description => 'Returns the 5 latest @replies',
         :regex => /^replies$/,
         :is_public => false
        ) do |sender, message|
@@ -346,7 +346,7 @@ class Bot
   end
   
   def execute_twitter_replies_command(sender,message)
-    deliver(sender, TwitterHub::Search.replies)
+    deliver(sender, TwitterHub::Timeline.mentions)
   end
     
   # these methods are helpers

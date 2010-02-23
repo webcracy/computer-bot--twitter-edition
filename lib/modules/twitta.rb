@@ -188,6 +188,14 @@ module TwitterHub
       return messages      
     end # self.friends
     
+    def self.mentions
+      twitter = TwitterHub::Client.connect
+      timeline = twitter.timeline_for(:mentions)
+      timeline.map do |status|
+        TwitterHub::Helper.format_status(status)
+      end
+    end
+    
     def self.dm
       twitter = TwitterHub::Client.connect
       dms = twitter.messages(:received)

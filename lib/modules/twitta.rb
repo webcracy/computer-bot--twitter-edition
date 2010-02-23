@@ -19,12 +19,21 @@ Twitter::Client.configure do |conf|
    # We can set Twitter4R to use another host name (perhaps for internal
    # testing purposes).
    # Defaults to 'twitter.com'
-   conf.host = 'twitter.com'
+   conf.host = config['twitter']['host'] || 'twitter.com'
 
    # We can set Twitter4R to use another port (also for internal
    # testing purposes).
    # Defaults to 443
-   conf.port = 443
+   conf.port = config['twitter']['port'] || 443
+
+   # We can set Twitter4R to use another path (for Twitter compatible APIs)
+   if config['twitter']['path']
+      if conf.respond_to?:path
+         conf.path = config['twitter']['path']
+      else
+         raise 'This version of Twitter4R does not support different API paths.'
+      end
+   end
 
    # We can set proxy information for Twitter4R
    # By default all following values are set to <tt>nil</tt>.

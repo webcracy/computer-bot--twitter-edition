@@ -14,10 +14,10 @@
   #   Tutorials: http://computer.webcracy.org/tutorials/
   #   Have fun.
   #   --------
-  #   To start (runs in the background): ruby computerbot.rb start 'env'
-  #   To restart: ruby computerbot.rb restart 'env'
+  #   To start (runs in the background): ruby computerbot.rb start <env>
+  #   To restart: ruby computerbot.rb restart <env>
   #   To stop: ruby computerbot.rb stop
-  #   To run in the foreground (debug mode): ruby computerbot.rb run 'env'
+  #   To run in the foreground (debug mode): ruby computerbot.rb run <env>
   # 
   ########################################################################
 

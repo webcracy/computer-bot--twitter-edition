@@ -2,6 +2,7 @@
 # http://twitter4r.rubyforge.org
 
 require 'rubygems'
+gem 'twitter4r'
 require 'twitter'
 require 'open-uri'
 require 'yaml/store'
